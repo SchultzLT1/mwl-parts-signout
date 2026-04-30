@@ -118,6 +118,10 @@ input[type=number]{text-align:center}
         <div class="field">
           <label>Taken By<span class="req">*</span></label>
           <div class="sw"><select id="emp-sel"><option value="">Loading…</option></select></div>
+          <div class="add-row">
+            <input type="text" id="new-emp" placeholder="e.g. Miguel" maxlength="40" />
+            <button class="add-btn" id="add-emp-btn" onclick="addEmp()">+ Add</button>
+          </div>
         </div>
         <div class="field">
           <label>Job<span class="req">*</span></label>
@@ -148,6 +152,7 @@ input[type=number]{text-align:center}
     <div class="okc">✓</div>
     <h2 id="ok-title">Parts Signed Out</h2>
     <p id="ok-msg">Logged successfully.</p>
+    <p id="ok-count" style="font-size:13px;color:var(--muted);margin-top:-16px;margin-bottom:20px">Resetting in 5…</p>
     <button class="nbtn" onclick="reset()">New Submission</button>
   </div>
 </div>
@@ -208,6 +213,22 @@ async function addJob(){
     document.getElementById('job-sel').value=v;
   }catch(e){toast('Failed to add job: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='+ Add Job';}
+}
+
+async function addEmp(){
+  const inp=document.getElementById('new-emp');
+  const v=inp.value.trim();
+  if(!v){toast('Enter a name','err');return;}
+  const btn=document.getElementById('add-emp-btn');
+  btn.disabled=true;btn.textContent='Adding…';
+  try{
+    await db('/rest/v1/parts_employees',{method:'POST',body:JSON.stringify({name:v,active:true}),headers:{'Prefer':'return=minimal'}});
+    inp.value='';
+    toast(v+' added','ok');
+    await loadEmp();
+    document.getElementById('emp-sel').value=v;
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='+ Add';}
 }
 
 function buildRows(){
@@ -341,6 +362,7 @@ async function submit(){
     document.getElementById('ok-title').textContent=mode==='return'?'Parts Returned':'Parts Signed Out';
     document.getElementById('ok-msg').innerHTML=`<strong>${items.length} line item${items.length>1?'s':''}</strong> logged for <strong>${job}</strong><br>`+
       new Date().toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+    startCountdown();
   }catch(e){
     toast('Submission failed: '+e.message,'err');
     btn.disabled=false;
@@ -348,12 +370,27 @@ async function submit(){
   }
 }
 
+let cdTimer;
+function startCountdown(){
+  let secs=5;
+  const el=document.getElementById('ok-count');
+  el.textContent='Resetting in '+secs+'…';
+  clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{
+    secs--;
+    if(secs<=0){clearInterval(cdTimer);reset();}
+    else el.textContent='Resetting in '+secs+'…';
+  },1000);
+}
+
 function reset(){
+  clearInterval(cdTimer);
   document.getElementById('form-area').style.display='block';
   document.getElementById('success').style.display='none';
   document.getElementById('emp-sel').value='';
   document.getElementById('job-sel').value='';
   document.getElementById('new-job').value='';
+  document.getElementById('new-emp').value='';
   switchTab('sign-out');buildRows();
 }
 
