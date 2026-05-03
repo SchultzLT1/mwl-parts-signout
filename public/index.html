@@ -353,9 +353,11 @@ async function submit(){
       new Date().toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
     startCountdown();
   }catch(e){
-    toast('Submission failed: '+e.message,'err');
+    toast('Submission failed — please try again','err');
+  }finally{
     btn.disabled=false;
     btn.textContent=mode==='sign-out'?'Submit Sign-Out':'Submit Return';
+    btn.className=mode==='sign-out'?'sbtn':'sbtn ret';
   }
 }
 
@@ -391,6 +393,19 @@ function toast(msg,type=''){
 }
 
 init();
+
+// Silently refresh dropdowns every 5 minutes so stale sessions don't block submission
+setInterval(()=>{ loadEmp(); loadJobs(); }, 5 * 60 * 1000);
+
+// Re-enable submit button if it gets stuck (failsafe)
+setInterval(()=>{
+  const btn=document.getElementById('sbtn');
+  if(btn && btn.disabled && btn.innerHTML.includes('Submitting')){
+    btn.disabled=false;
+    btn.textContent=mode==='sign-out'?'Submit Sign-Out':'Submit Return';
+    btn.className=mode==='sign-out'?'sbtn':'sbtn ret';
+  }
+}, 10000);
 </script>
 </body>
 </html>
